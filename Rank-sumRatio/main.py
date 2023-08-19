@@ -1,11 +1,9 @@
 import pandas as pd
 import numpy as np
 import statsmodels.api as sm
+import statsmodels.api as sm
 from scipy.stats import norm
 
-# TODO:
-# 非整次
-# 调整分档标准
 
 def rsr(data, weight=None, threshold=None, full_rank=True):
 	Result = pd.DataFrame()
@@ -19,7 +17,7 @@ def rsr(data, weight=None, threshold=None, full_rank=True):
 	else:
 		for i, X in enumerate(data.columns):
 			Result[f'X{str(i + 1)}：{X}'] = data.iloc[:, i]
-			Result[f'R{str(i + 1)}：{X}'] = 1 + (n - 1) * (data.iloc[:, i].max() - data.iloc[:, i]) / (data.iloc[:, i].max() - data.iloc[:, i].min())
+			Result[f'R{str(i + 1)}：{X}'] = 1 + (n - 1) * (data.iloc[:, i] - data.iloc[:, i].min()) / (data.iloc[:, i].max() - data.iloc[:, i].min())
 
 	# 计算秩和比
 	weight = 1 / m if weight is None else np.array(weight) / sum(weight)
@@ -49,7 +47,8 @@ def rsr(data, weight=None, threshold=None, full_rank=True):
 	Result['Probit'] = Result['RSR'].apply(lambda item: Distribution.at[item, 'Probit'])
 	Result['RSR Regression'] = np.polyval(r0, Result['Probit'])
 	# [2, 4, 6, 8]表示概率单位Probit
-	threshold = np.polyval(r0, [2, 4, 6, 8]) if threshold is None else np.polyval(r0, threshold)
+	# 默认分三档
+	threshold = np.polyval(r0, [-100000, 4, 6, 100000]) if threshold is None else np.polyval(r0, threshold)
 	Result['Level'] = pd.cut(Result['RSR Regression'], threshold, labels=range(len(threshold) - 1, 0, -1))
 
 	return Result, Distribution
@@ -73,6 +72,12 @@ if __name__ == '__main__':
 						 '孕妇死亡率': [60.27, 59.67, 43.91, 58.99, 35.40, 44.71, 49.81, 31.69, 22.91, 81.49],
 						 '围产儿死亡率': [16.15, 20.10, 15.60, 17.04, 15.01, 13.93, 17.43, 13.89, 19.87, 23.63]},
 						index=list('ABCDEFGHIJ'), columns=['产前检查率', '孕妇死亡率', '围产儿死亡率'])
-	data["孕妇死亡率"] = 1 / data["孕妇死亡率"]
-	data["围产儿死亡率"] = 1 / data["围产儿死亡率"]
-	rsrAnalysis(data)
+	data['孕妇死亡率'] = - data['孕妇死亡率']
+	data['围产儿死亡率'] = - data['围产儿死亡率']
+	params = {
+		'weight': [1, 1, 1],  # 示例参数
+		'threshold': [-100000, 3.5, 5, 6.5, 100000], # 分档标准，四档：中间三个分割点
+		'full_rank': False  # True表示整次秩，False表示非整次秩
+	}
+
+	rsrAnalysis(data, **params)

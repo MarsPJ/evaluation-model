@@ -1,0 +1,21 @@
+function [W] = Entropy_Weight(X)
+    Pro=X./repmat(sum(X),size(X,1),1);
+    disp("概率矩阵：");
+    disp(Pro);
+    row=size(X,1);
+    col=size(X,2);
+    E=zeros(1,col);
+    for j=1:col
+        temp=sum(Pro(:,j).*Modi_log(Pro(:,j)));
+        E(j)=-temp/log(row);
+    end
+    disp("信息熵：");
+    disp(E);
+    D=1-E;
+    disp("信息效用值：");
+    disp(D);
+    W=D./sum(D);
+    disp("熵权法得到的权重：");
+    disp(W);
+end
+
